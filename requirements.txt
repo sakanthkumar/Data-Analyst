@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pandas
+numpy
+matplotlib
+seaborn
+requests
+python-dotenv
+langchain
+chromadb
+pypdf
+duckduckgo-search
+langchain-community
+langchain-core
