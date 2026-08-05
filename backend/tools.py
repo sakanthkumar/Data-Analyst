@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger("DataAnalystAgent.Tools")
+
 def search_web(query: str):
     """
     Searches the web for the given query using DuckDuckGo.
@@ -8,7 +12,5 @@ def search_web(query: str):
         search = DuckDuckGoSearchRun()
         return search.run(query)
     except Exception as e:
-        # Return None so the caller knows it failed, rather than an error string
-        # that might be confused for a definition.
-        print(f"Web Search Warning: {str(e)}")
+        logger.warning(f"Web Search Warning: {str(e)}")
         return None

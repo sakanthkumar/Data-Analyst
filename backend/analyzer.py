@@ -64,26 +64,10 @@ def auto_eda(df: pd.DataFrame):
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
 
     # Basic Info
-    # Calculate true failures for EDA
-    failure_count = 0
-    possible_cols = ["Machine failure", "Failure", "Target", "failure", "target"]
-    found_col = next((c for c in possible_cols if c in df.columns), None)
-    
-    if found_col:
-        failure_count = int(df[found_col].sum())
-    else:
-        # If no explicit failure column, default to 0 (or rows? User wants failures specifically)
-        # For EDA, if we can't find a failure column, saying 0 failures is technically more accurate 
-        # than saying "All rows are failures". 
-        # But to be consistent with upload endpoint, let's keep the fallback but maybe cleaner.
-        # Actually, let's stick to the logic: if no failure col, maybe show 0 or handle in frontend.
-        # Current upload endpoint falls back to df.shape[0]. Let's match that to avoid UI glitch.
-        failure_count = df.shape[0]
-
-    # Calculate Failure Rate
-    failure_rate = 0.0
-    if df.shape[0] > 0:
-        failure_rate = round((failure_count / df.shape[0]) * 100, 2)
+    # Calculate true target prevalences and rate for EDA
+    stats = get_failure_stats(df)
+    failure_count = stats.get("total_failures", 0)
+    failure_rate = stats.get("failure_rate", 0.0)
 
     summary = {
         "shape": df.shape,
@@ -124,6 +108,9 @@ def auto_eda(df: pd.DataFrame):
             outliers[col] = int(count)
             
     summary["outliers"] = outliers
+
+    # Duplicate Rows Count
+    summary["duplicate_rows"] = int(df.duplicated().sum())
     
     # Categorical Distributions (Top 10 counts)
     distributions = {}
@@ -136,132 +123,318 @@ def auto_eda(df: pd.DataFrame):
     # Final Recursive Cleaning
     return clean_for_json(summary)
 
-def get_failure_stats(df: pd.DataFrame):
+def find_target_column(df: pd.DataFrame, target_override: str = None):
     """
-    Returns raw dictionary of failure statistics.
+    Identifies target variable dynamically, prioritizing manual override.
     """
-    possible_cols = ["Machine failure", "Failure", "Target", "failure", "target"]
-    target_col = next((c for c in possible_cols if c in df.columns), None)
-    
+    if target_override and target_override in df.columns:
+        return target_override
+
+    # Check if target columns are present (priority ordered)
+    possible_cols = [
+        "Target", "target", "label", "Label", "y", "Machine failure", "Failure", "failure", 
+        "Survived", "survived", "churn", "Churn", "default", "Default", "class", "Class",
+        "output", "Output", "response", "Response", "clicked", "Clicked", "decision", "Decision"
+    ]
+    # Check exact match
+    for col in possible_cols:
+        if col in df.columns:
+            return col
+            
+    # Check case-insensitive match
+    cols_lower = {c.lower(): c for c in df.columns}
+    for col in possible_cols:
+        col_lower = col.lower()
+        if col_lower in cols_lower:
+            return cols_lower[col_lower]
+            
+    if len(df.columns) > 0:
+        # Default to the last column
+        return df.columns[-1]
+    return None
+
+class TargetAnalysisEngine:
+    @staticmethod
+    def get_target_stats(df: pd.DataFrame, target_override: str = None) -> dict:
+        """
+        Returns generic statistics on the target variable.
+        (Previously get_failure_stats)
+        """
+        target_col = find_target_column(df, target_override=target_override)
+        if not target_col:
+            return {"error": "No target column found"}
+
+        total_records = len(df)
+        unique_vals = df[target_col].dropna().unique()
+        
+        # Determine type of target: classification (binary/categorical) or regression
+        if pd.api.types.is_bool_dtype(df[target_col]) or (pd.api.types.is_numeric_dtype(df[target_col]) and len(unique_vals) <= 2):
+            target_type = "classification"
+        elif len(unique_vals) <= 10:
+            target_type = "classification"
+        else:
+            target_type = "regression"
+
+        target_instances = 0
+        target_rate = 0.0
+        modes = []
+
+        if target_type == "classification" and len(unique_vals) > 0:
+            # Identify positive class val
+            positive_val = None
+            for val in [1, True, 1.0, "1", "True", "true", "yes", "Yes", "Failure", "failure", "Survived", "survived"]:
+                if val in unique_vals:
+                    positive_val = val
+                    break
+            if positive_val is None:
+                positive_val = unique_vals[1] if len(unique_vals) > 1 else unique_vals[0]
+
+            target_instances = int((df[target_col] == positive_val).sum())
+            target_rate = round((target_instances / total_records) * 100, 2) if total_records > 0 else 0.0
+
+            # Sub-category/feature breakdown
+            for col in df.columns:
+                if col == target_col: continue
+                if pd.api.types.is_numeric_dtype(df[col]) or pd.api.types.is_bool_dtype(df[col]):
+                    unique_vals_col = set(df[col].dropna().unique())
+                    if unique_vals_col.issubset({0, 1, 0.0, 1.0, True, False}):
+                        count = int(((df[col] == 1) & (df[target_col] == positive_val)).sum())
+                        if count > 0:
+                            pct = (count / target_instances * 100) if target_instances > 0 else 0
+                            modes.append({"name": col, "count": count, "percent": pct})
+
+        elif target_type == "regression":
+            # Outlier counts (IQR method) as high-value target instances
+            q1 = df[target_col].quantile(0.25)
+            q3 = df[target_col].quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+            outliers_mask = (df[target_col] < lower_bound) | (df[target_col] > upper_bound)
+            target_instances = int(outliers_mask.sum())
+            
+            if target_instances == 0:
+                # Fallback to top 10% highest values
+                threshold = df[target_col].quantile(0.90)
+                outliers_mask = df[target_col] >= threshold
+                target_instances = int(outliers_mask.sum())
+
+            target_rate = round((target_instances / total_records) * 100, 2) if total_records > 0 else 0.0
+
+            # Sub-category analysis by grouping categorical values for target outliers
+            for col in df.columns:
+                if col == target_col: continue
+                if pd.api.types.is_categorical_dtype(df[col]) or df[col].dtype == 'object':
+                    top_cats = df[outliers_mask][col].value_counts().head(3)
+                    for cat, count in top_cats.items():
+                        pct = (count / target_instances * 100) if target_instances > 0 else 0
+                        modes.append({"name": f"{col} = {cat}", "count": int(count), "percent": pct})
+
+            if not modes:
+                for col in df.columns:
+                    if col == target_col: continue
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        unique_vals_col = set(df[col].dropna().unique())
+                        if unique_vals_col.issubset({0, 1, 0.0, 1.0, True, False}):
+                            count = int(((df[col] == 1) & outliers_mask).sum())
+                            if count > 0:
+                                pct = (count / target_instances * 100) if target_instances > 0 else 0
+                                modes.append({"name": col, "count": count, "percent": pct})
+
+        modes.sort(key=lambda x: x["count"], reverse=True)
+
+        return {
+            "target_column": target_col,
+            "target_type": target_type,
+            "total_records": total_records,
+            "total_targets": target_instances,
+            "target_rate": target_rate,
+            "modes": modes,
+            # Backward compatibility keys
+            "total_failures": target_instances,
+            "failure_rate": target_rate
+        }
+
+    @staticmethod
+    def analyze_target_drivers(df: pd.DataFrame, target_override: str = None) -> str:
+        """
+        Generates analysis report of the target drivers.
+        (Previously analyze_failure_modes)
+        """
+        stats = TargetAnalysisEngine.get_target_stats(df, target_override=target_override)
+        if "error" in stats:
+            return "No specific target variable column identified. Cannot profile data segments automatically."
+            
+        total_targets = stats["total_targets"]
+        target_col = stats["target_column"]
+        target_type = stats["target_type"]
+        
+        if total_targets == 0:
+            return f"No occurrences of target events found for target variable '{target_col}'."
+
+        report = [f"### Target Driver & Category Analysis"]
+        report.append(f"**Target Variable**: `{target_col}` ({target_type} type)")
+        report.append(f"**Total Highlighted Records**: {total_targets}")
+        
+        if stats["modes"]:
+            report.append("\n**Breakdown of Target Contexts:**")
+            for m in stats["modes"]:
+                report.append(f"- **{m['name']}**: {m['count']} ({m['percent']:.1f}%)")
+        else:
+            report.append("\nNo specific subset indicators found for the target variable.")
+
+        report.append("\n*This analysis was generated instantly based on dataset statistics.*")
+        return "\n".join(report)
+
+    @staticmethod
+    def get_highlighted_records(df: pd.DataFrame, target_override: str = None) -> list:
+        """
+        Extracts highlighted rows based on target variable.
+        (Previously get_failures)
+        """
+        target_col = find_target_column(df, target_override=target_override)
+        if not target_col:
+            return []
+
+        unique_vals = df[target_col].dropna().unique()
+        if pd.api.types.is_bool_dtype(df[target_col]) or (pd.api.types.is_numeric_dtype(df[target_col]) and len(unique_vals) <= 2):
+            target_type = "classification"
+        elif len(unique_vals) <= 10:
+            target_type = "classification"
+        else:
+            target_type = "regression"
+
+        if target_type == "classification" and len(unique_vals) > 0:
+            positive_val = None
+            for val in [1, True, 1.0, "1", "True", "true", "yes", "Yes", "Failure", "failure", "Survived", "survived"]:
+                if val in unique_vals:
+                    positive_val = val
+                    break
+            if positive_val is None:
+                positive_val = unique_vals[1] if len(unique_vals) > 1 else unique_vals[0]
+                
+            highlighted_df = df[df[target_col] == positive_val]
+        else:
+            # Regression: Outliers or Top 10% highest values
+            q1 = df[target_col].quantile(0.25)
+            q3 = df[target_col].quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+            mask = (df[target_col] < lower_bound) | (df[target_col] > upper_bound)
+            if mask.sum() == 0:
+                mask = df[target_col] >= df[target_col].quantile(0.90)
+            highlighted_df = df[mask]
+
+        if not highlighted_df.empty:
+            # Limit to top 1000 to prevent huge payloads
+            records = highlighted_df.head(1000).to_dict(orient="records")
+            return clean_for_json(records)
+        return []
+
+def get_failure_stats(df: pd.DataFrame, target_override: str = None):
+    return TargetAnalysisEngine.get_target_stats(df, target_override=target_override)
+
+def analyze_failure_modes(df: pd.DataFrame, target_override: str = None):
+    return TargetAnalysisEngine.analyze_target_drivers(df, target_override=target_override)
+
+def get_correlation_stats(df: pd.DataFrame, target_override: str = None):
+    """
+    Returns correlation data.
+    """
+    target_col = find_target_column(df, target_override=target_override)
     if not target_col:
         return {"error": "No target column found"}
-
-    total_records = len(df)
-    total_failures = int(df[target_col].sum())
-    
-    modes = []
-    # Identify Failure Modes
-    for col in df.columns:
-        if col == target_col: continue
-        if pd.api.types.is_numeric_dtype(df[col]):
-            unique_vals = set(df[col].dropna().unique())
-            if unique_vals.issubset({0, 1, 0.0, 1.0}):
-                count = int(df[col].sum())
-                if count > 0:
-                    pct = (count / total_failures * 100) if total_failures > 0 else 0
-                    modes.append({"name": col, "count": count, "percent": pct})
-    
-    modes.sort(key=lambda x: x["count"], reverse=True)
-    
-    return {
-        "total_records": total_records,
-        "total_failures": total_failures,
-        "modes": modes
-    }
-
-def analyze_failure_modes(df: pd.DataFrame):
-    stats = get_failure_stats(df)
-    if "error" in stats:
-        return "No specific failure label column identified. Cannot categorize failures automatically."
         
-    total_failures = stats["total_failures"]
-    if total_failures == 0:
-        return "No failures found in the dataset."
-
-    report = [f"### Analysis Result"]
-    report.append(f"**Total Failures Detected**: {total_failures}")
-    
-    if stats["modes"]:
-        report.append("\n**Breakdown by Failure Mode:**")
-        count_sum = 0
-        for m in stats["modes"]:
-            report.append(f"- **{m['name']}**: {m['count']} ({m['percent']:.1f}%)")
-            count_sum += m['count']
-            
-        if count_sum < total_failures:
-            report.append(f"\n> **Warning**: The sum of failure modes ({count_sum}) is less than total failures ({total_failures}). Some failures may be uncategorized or unlabeled.")
+    unique_vals = df[target_col].dropna().unique()
+    if pd.api.types.is_bool_dtype(df[target_col]) or (pd.api.types.is_numeric_dtype(df[target_col]) and len(unique_vals) <= 2):
+        target_type = "classification"
+    elif len(unique_vals) <= 10:
+        target_type = "classification"
     else:
-        report.append("\nNo specific binary failure type columns found. Failures may be unlabeled.")
+        target_type = "regression"
 
-    report.append("\n*This analysis was generated instantly based on dataset statistics.*")
-    return "\n".join(report)
-
-def get_correlation_stats(df: pd.DataFrame):
-    """
-    Returns raw correlation data.
-    """
-    possible_cols = ["Machine failure", "Failure", "Target", "failure", "target"]
-    target_col = next((c for c in possible_cols if c in df.columns), None)
-    
-    if not target_col:
-        return {"error": "No target column"}
-        
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     stats = {"top_correlations": [], "shifts": []}
     
     try:
         # 1. Correlations
-        corrs = df[numeric_cols].corrwith(df[target_col]).sort_values(ascending=False)
-        top_corr = corrs[abs(corrs) > 0.1].drop(target_col, errors='ignore')
+        target_series = df[target_col]
+        if not pd.api.types.is_numeric_dtype(target_series):
+            target_series = pd.Series(pd.factorize(target_series)[0], index=target_series.index)
+            
+        corrs = df[numeric_cols].corrwith(target_series).sort_values(ascending=False)
+        top_corr = corrs[abs(corrs) > 0.05].drop(target_col, errors='ignore')
         
         for col, val in top_corr.head(5).items():
+            if pd.isna(val): continue
             stats["top_correlations"].append({"feature": col, "value": val})
             
         # 2. Shifts
-        failures = df[df[target_col] == 1]
-        normal = df[df[target_col] == 0]
+        if target_type == "classification" and len(unique_vals) > 0:
+            positive_val = None
+            for val in [1, True, 1.0, "1", "True", "true", "yes", "Yes", "Failure", "failure"]:
+                if val in unique_vals:
+                    positive_val = val
+                    break
+            if positive_val is None:
+                positive_val = unique_vals[1] if len(unique_vals) > 1 else unique_vals[0]
+                
+            pos_mask = df[target_col] == positive_val
+            neg_mask = df[target_col] != positive_val
+        else:
+            q1 = df[target_col].quantile(0.25)
+            q3 = df[target_col].quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+            pos_mask = (df[target_col] < lower_bound) | (df[target_col] > upper_bound)
+            if pos_mask.sum() == 0:
+                pos_mask = df[target_col] >= df[target_col].quantile(0.90)
+            neg_mask = ~pos_mask
+            
+        pos_df = df[pos_mask]
+        neg_df = df[neg_mask]
         
-        if not failures.empty and not normal.empty:
+        if not pos_df.empty and not neg_df.empty:
             for col in numeric_cols:
                 if col == target_col or "id" in col.lower(): continue
-                fail_mean = failures[col].mean()
-                norm_mean = normal[col].mean()
-                if norm_mean != 0:
-                    pct_diff = ((fail_mean - norm_mean) / norm_mean) * 100
+                pos_mean = pos_df[col].mean()
+                neg_mean = neg_df[col].mean()
+                if neg_mean != 0 and not pd.isna(pos_mean) and not pd.isna(neg_mean):
+                    pct_diff = ((pos_mean - neg_mean) / neg_mean) * 100
                     if abs(pct_diff) > 5:
                         stats["shifts"].append({
                             "feature": col,
                             "pct_diff": pct_diff,
-                            "fail_mean": fail_mean,
-                            "norm_mean": norm_mean
+                            "fail_mean": pos_mean, # compatibility key
+                            "norm_mean": neg_mean  # compatibility key
                         })
     except Exception as e:
         return {"error": str(e)}
         
     return stats
 
-def analyze_correlations(df: pd.DataFrame):
-    stats = get_correlation_stats(df)
+def analyze_correlations(df: pd.DataFrame, target_override: str = None):
+    stats = get_correlation_stats(df, target_override=target_override)
     if "error" in stats:
-        if stats["error"] == "No target column":
-            return "No failure label found (Machine failure/Target). Cannot analyze root cause."
         return f"Could not calculate correlations: {stats['error']}"
         
-    summary = ["### Statistical Root Cause Analysis"]
+    summary = ["### Statistical Key Driver Analysis"]
     
     # Corrs
     if stats["top_correlations"]:
-        summary.append("**Top Correlated Factors (1.0 = Perfect Cause):**")
+        summary.append("**Top Correlated Features with the Target Variable:**")
         for item in stats["top_correlations"]:
             summary.append(f"- {item['feature']}: {item['value']:.2f}")
     else:
-        summary.append("No strong linear correlations found with failure.")
+        summary.append("No strong linear correlations found with the target variable.")
         
     # Shifts
     if stats["shifts"]:
-        summary.append("\n**Sensor Behavior During Failure:**")
+        summary.append("\n**Feature Behavior During High/Target Value Events:**")
         for item in stats["shifts"]:
             direction = "HIGHER" if item['pct_diff'] > 0 else "LOWER"
-            summary.append(f"- {item['feature']}: {abs(item['pct_diff']):.1f}% {direction} during failure (Avg: {item['fail_mean']:.1f} vs {item['norm_mean']:.1f})")
+            summary.append(f"- {item['feature']}: {abs(item['pct_diff']):.1f}% {direction} (Avg: {item['fail_mean']:.1f} vs {item['norm_mean']:.1f})")
             
     return "\n".join(summary)

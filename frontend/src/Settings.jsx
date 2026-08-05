@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useTheme } from './ThemeContext';
+import { api } from './services/api';
 
 export default function Settings() {
     const { theme, toggleTheme } = useTheme();
@@ -32,7 +32,7 @@ export default function Settings() {
 
     const fetchConfig = async () => {
         try {
-            const res = await axios.get("http://localhost:8000/settings/config");
+            const res = await api.getConfig();
             setCurrentModel(res.data.model);
             if (res.data.temperature !== undefined) setTemperature(res.data.temperature);
             if (res.data.rag_depth !== undefined) setRagDepth(res.data.rag_depth);
@@ -45,7 +45,7 @@ export default function Settings() {
 
     const fetchModels = async () => {
         try {
-            const res = await axios.get("http://localhost:8000/settings/models");
+            const res = await api.getModels();
             setModels(res.data.models || []);
         } catch (e) {
             console.error("Failed to fetch models", e);
@@ -57,7 +57,7 @@ export default function Settings() {
         setLoading(true);
         setMessage('');
         try {
-            await axios.post("http://localhost:8000/settings/model", { model: newModel });
+            await api.updateModel(newModel);
             setCurrentModel(newModel);
             setMessage(`Successfully switched to ${newModel}`);
         } catch (e) {
@@ -71,22 +71,22 @@ export default function Settings() {
         const val = parseFloat(e.target.value);
         setTemperature(val);
         try {
-            await axios.post("http://localhost:8000/settings/temperature", { temperature: val });
+            await api.updateTemperature(val);
         } catch (e) { console.error("Failed to set temp", e); }
     };
 
     const handleClearKB = async () => {
-        if (!window.confirm("Are you sure? This will delete all analyzed manuals.")) return;
+        if (!window.confirm("Are you sure? This will delete all analyzed reference documents.")) return;
         try {
-            await axios.post("http://localhost:8000/manuals/clear");
+            await api.clearKnowledgeBase();
             alert("Knowledge Base cleared.");
         } catch (e) { alert("Failed to clear KB."); }
     };
 
     const saveExpertSettings = async () => {
         try {
-            await axios.post("http://localhost:8000/settings/expert", { system_prompt: systemPrompt, ollama_url: ollamaUrl });
-            await axios.post("http://localhost:8000/settings/rag", { n_results: ragDepth });
+            await api.updateExpertSettings(systemPrompt, ollamaUrl);
+            await api.updateRagSettings(ragDepth);
             alert("Expert settings saved!");
         } catch (e) { alert("Failed to save expert settings."); }
     };
@@ -148,7 +148,7 @@ export default function Settings() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
                             <strong>Clear Knowledge Base</strong>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Delete all ingested manuals and reset the RAG index.</p>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Delete all ingested documents and reset the RAG index.</p>
                         </div>
                         <button
                             className="secondary-btn"
@@ -179,7 +179,7 @@ export default function Settings() {
                                 onChange={(e) => setRagDepth(parseInt(e.target.value))}
                                 style={{ width: '100%' }}
                             />
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>How many manual values to read? More = Slower but smarter.</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>How many document chunks to retrieve? More = Slower but smarter.</p>
                         </div>
 
                         <div style={{ marginBottom: '15px' }}>
@@ -227,7 +227,7 @@ export default function Settings() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                     <div>
                         <strong>Auto-Analyze Uploads</strong>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Automatically run "Identify Failures" on new CSVs</p>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Automatically run "Key Driver Scan" on new CSVs</p>
                     </div>
                     <label className="switch">
                         <input type="checkbox" checked={autoAnalyze} onChange={(e) => setAutoAnalyze(e.target.checked)} />

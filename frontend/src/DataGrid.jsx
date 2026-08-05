@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './services/api';
 
 export default function DataGrid({ onClose }) {
     const [data, setData] = useState([]);
@@ -13,7 +13,7 @@ export default function DataGrid({ onClose }) {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await axios.get(`http://localhost:8000/data?page=${page}&limit=${limit}`);
+                const res = await api.getLogs(page, limit);
                 if (res.data.data && res.data.data.length > 0) {
                     setData(res.data.data);
                     setColumns(Object.keys(res.data.data[0]));

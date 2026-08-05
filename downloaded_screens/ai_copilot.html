@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analyst.AI | Copilot Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#8990a8",
+                        "on-tertiary-container": "#22293d",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "inverse-surface": "#d3e4fe",
+                        "on-primary-fixed-variant": "#004395",
+                        "on-secondary-fixed": "#23005c",
+                        "secondary": "#d0bcff",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#c2c6d6",
+                        "background": "#031427",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "inverse-primary": "#005ac2",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "on-tertiary": "#283044",
+                        "secondary-container": "#571bc1",
+                        "outline": "#8c909f",
+                        "surface": "#031427",
+                        "surface-bright": "#2a3a4f",
+                        "surface-container-low": "#0b1c30",
+                        "surface-container-highest": "#26364a",
+                        "surface-dim": "#031427",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "surface-tint": "#adc6ff",
+                        "primary-fixed": "#d8e2ff",
+                        "on-surface": "#d3e4fe",
+                        "tertiary-fixed": "#dae2fd",
+                        "on-primary-container": "#00285d",
+                        "outline-variant": "#424754",
+                        "surface-container-high": "#1b2b3f",
+                        "on-background": "#d3e4fe",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-tertiary-fixed": "#131b2e",
+                        "on-primary": "#002e6a",
+                        "primary-fixed-dim": "#adc6ff",
+                        "surface-variant": "#26364a",
+                        "on-primary-fixed": "#001a42",
+                        "on-error": "#690005",
+                        "on-secondary": "#3c0091",
+                        "inverse-on-surface": "#213145",
+                        "secondary-fixed": "#e9ddff",
+                        "primary-container": "#4d8eff",
+                        "surface-container": "#102034",
+                        "surface-container-lowest": "#000f21",
+                        "on-secondary-container": "#c4abff",
+                        "tertiary": "#bec6e0",
+                        "primary": "#adc6ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter-md": "24px",
+                        "gutter-sm": "16px",
+                        "unit": "4px",
+                        "container-max": "1440px",
+                        "margin-page": "40px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Geist"],
+                        "label-md": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-xl": ["Geist"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "1.55", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.25", "fontWeight": "600"}],
+                        "label-md": ["13px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "1.45", "fontWeight": "400"}],
+                        "label-sm": ["11px", {"lineHeight": "1", "fontWeight": "500"}],
+                        "headline-xl": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #031427;
+            color: #d3e4fe;
+            overflow: hidden;
+        }
+        .glass-panel {
+            background: rgba(11, 28, 48, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        .ai-message-gradient {
+            border: 1px solid rgba(208, 188, 255, 0.2);
+            position: relative;
+        }
+        .ai-message-gradient::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(to bottom right, rgba(208, 188, 255, 0.3), transparent, rgba(173, 198, 255, 0.3));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(140, 144, 159, 0.2);
+            border-radius: 10px;
+        }
+        .input-glow:focus-within {
+            box-shadow: 0 0 20px rgba(173, 198, 255, 0.1), inset 0 0 10px rgba(173, 198, 255, 0.05);
+            border-color: rgba(173, 198, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="flex font-body-md text-body-md antialiased">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-surface-container-low border-r border-outline-variant/10 shadow-md flex flex-col py-gutter-md z-40">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Analyst.AI</h1>
+<p class="font-label-sm text-on-surface-variant tracking-widest mt-1">ENTERPRISE SUITE</p>
+</div>
+<nav class="flex-1 space-y-1 px-4">
+<button class="w-full flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</button>
+<button class="w-full flex items-center px-4 py-3 rounded-lg text-primary bg-primary-container/20 border-r-2 border-primary transition-colors duration-200">
+<span class="material-symbols-outlined mr-3">psychology</span>
+<span class="font-body-md">AI Copilot</span>
+</button>
+<button class="w-full flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200">
+<span class="material-symbols-outlined mr-3">query_stats</span>
+<span class="font-body-md">Data Explorer</span>
+</button>
+<button class="w-full flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-body-md">Advanced Insights</span>
+</button>
+<button class="w-full flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors duration-200">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-body-md">Admin Console</span>
+</button>
+</nav>
+<div class="px-4 py-4 space-y-2 mt-auto">
+<button class="w-full flex items-center px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined mr-3 text-sm">help</span>
+<span class="font-label-md">Help Center</span>
+</button>
+<button class="w-full flex items-center px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined mr-3 text-sm">description</span>
+<span class="font-label-md">Documentation</span>
+</button>
+</div>
+</aside>
+<!-- Main Workspace Container -->
+<main class="flex-1 ml-64 flex flex-col h-screen relative bg-surface-container-lowest">
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-30 flex items-center justify-between px-gutter-md h-16 bg-surface/40 backdrop-blur-xl border-b border-outline-variant/5">
+<div class="flex items-center space-x-6">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">AI Copilot</span>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<nav class="flex space-x-4">
+<a class="font-label-md text-label-md text-primary border-b-2 border-primary pb-2" href="#">Overview</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Reports</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-opacity" href="#">Alerts</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<div class="flex space-x-2">
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A clean and professional digital avatar icon of a business executive wearing glasses and a formal suit, designed in a minimalist flat vector style using a corporate professional color palette of navy blue and soft gray for a high-end enterprise interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALMOp_z9UOaApMuwslUwgO20LHK4GKNIXCK7jUN4kyjzHQJ8IlS3wRD6laY5bfkafAqZsPHEBIbWyy6304_G5Mwwd64eLu4rjfUiR3P7Q68NrlHVhcq38nTdCkGREM8WxqyefbGZ8J0QEDQD8aFcm1PWOlegM8sZKYaUn_NvbWRl_VPZ0ZHNBmKgVNMXgHvYbttNn1Zxf8cu78y-zoSjuWRdLDamON0AhleCSxO3QwQrp42sXQWlZHWauNfzy6q-plNsPvzH6ZKg"/>
+</div>
+</div>
+</header>
+<!-- Conversational Canvas -->
+<div class="flex flex-1 pt-16 h-full overflow-hidden">
+<!-- Sidebar: Suggested Prompts & History -->
+<aside class="w-80 border-r border-outline-variant/10 p-6 flex flex-col hidden lg:flex bg-surface-container-low/30">
+<div class="mb-8">
+<h3 class="font-label-md text-label-md text-primary mb-4 flex items-center">
+<span class="material-symbols-outlined text-sm mr-2">lightbulb</span>
+                        SUGGESTED ANALYSES
+                    </h3>
+<div class="space-y-3">
+<button class="w-full text-left p-3 rounded-xl glass-panel hover:bg-surface-container-highest transition-all duration-200 group">
+<p class="font-body-sm text-on-surface-variant group-hover:text-on-surface">"Compare Q3 revenue growth against projected market trends."</p>
+</button>
+<button class="w-full text-left p-3 rounded-xl glass-panel hover:bg-surface-container-highest transition-all duration-200 group">
+<p class="font-body-sm text-on-surface-variant group-hover:text-on-surface">"Identify anomalies in the cloud infrastructure costs."</p>
+</button>
+<button class="w-full text-left p-3 rounded-xl glass-panel hover:bg-surface-container-highest transition-all duration-200 group">
+<p class="font-body-sm text-on-surface-variant group-hover:text-on-surface">"Generate a risk assessment for the EMEA expansion."</p>
+</button>
+</div>
+</div>
+<div class="mt-auto">
+<div class="p-4 rounded-2xl bg-primary-container/10 border border-primary/20">
+<div class="flex items-center mb-2">
+<span class="material-symbols-outlined text-primary text-xl mr-2" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-label-md text-primary">Copilot Pro</span>
+</div>
+<p class="text-xs text-on-surface-variant mb-3">Unlock real-time data streaming and advanced model tuning.</p>
+<button class="w-full py-2 bg-primary text-on-primary rounded-lg font-label-md text-xs hover:opacity-90 transition-opacity">Upgrade Workspace</button>
+</div>
+</div>
+</aside>
+<!-- Main Chat Area -->
+<section class="flex-1 flex flex-col relative">
+<div class="flex-1 overflow-y-auto custom-scrollbar px-gutter-md py-8">
+<div class="max-w-3xl mx-auto space-y-10 pb-32">
+<!-- Initial Greeting / Empty State -->
+<div class="text-center py-12">
+<div class="w-16 h-16 bg-primary-container/20 rounded-full flex items-center justify-center mx-auto mb-6">
+<span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg mb-2">How can I assist your analysis today?</h2>
+<p class="font-body-md text-on-surface-variant max-w-md mx-auto">Access enterprise-grade models and real-time data connectors to transform complex queries into actionable insights.</p>
+</div>
+<!-- User Message -->
+<div class="flex justify-end">
+<div class="max-w-[80%] px-5 py-4 rounded-2xl glass-panel text-on-surface border-transparent">
+<p class="font-body-md">Analyze our customer churn rate for the last 12 months and visualize the primary drivers of attrition.</p>
+</div>
+</div>
+<!-- AI Response with Embedded Chart -->
+<div class="flex justify-start space-x-4">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-sm text-on-secondary-container">auto_awesome</span>
+</div>
+<div class="flex-1 max-w-[85%] space-y-4">
+<div class="ai-message-gradient px-6 py-5 rounded-2xl bg-surface-container/60">
+<p class="font-body-md mb-4">Based on the integrated CRM and subscription data, the average churn rate over the last 12 months is **3.2%**. While stable, there was a noticeable spike in Month 8 due to seasonal contract expirations. Below is the breakdown of the attrition drivers:</p>
+<!-- Interactive Chart Component -->
+<div class="w-full h-64 glass-panel rounded-xl p-4 relative overflow-hidden group">
+<div class="absolute top-4 left-4 z-10">
+<span class="font-label-sm text-xs text-primary mb-1 block">ATTRITION DRIVERS (%)</span>
+<div class="flex items-center space-x-4">
+<div class="flex items-center">
+<div class="w-2 h-2 rounded-full bg-primary mr-2"></div>
+<span class="text-[10px] text-on-surface-variant">Onboarding Issues</span>
+</div>
+<div class="flex items-center">
+<div class="w-2 h-2 rounded-full bg-secondary mr-2"></div>
+<span class="text-[10px] text-on-surface-variant">Competitor Pricing</span>
+</div>
+<div class="flex items-center">
+<div class="w-2 h-2 rounded-full bg-tertiary mr-2"></div>
+<span class="text-[10px] text-on-surface-variant">Product Fit</span>
+</div>
+</div>
+</div>
+<!-- Visual Representation of a Professional Chart -->
+<div class="absolute inset-0 flex items-end justify-around px-8 pb-8 pt-16">
+<div class="w-12 bg-primary/40 rounded-t-lg transition-all hover:bg-primary/60 cursor-pointer" style="height: 65%;"></div>
+<div class="w-12 bg-secondary/40 rounded-t-lg transition-all hover:bg-secondary/60 cursor-pointer" style="height: 45%;"></div>
+<div class="w-12 bg-tertiary/40 rounded-t-lg transition-all hover:bg-tertiary/60 cursor-pointer" style="height: 30%;"></div>
+<div class="w-12 bg-primary/30 rounded-t-lg transition-all hover:bg-primary/50 cursor-pointer" style="height: 85%;"></div>
+<div class="w-12 bg-secondary/30 rounded-t-lg transition-all hover:bg-secondary/50 cursor-pointer" style="height: 20%;"></div>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent pointer-events-none"></div>
+</div>
+<p class="font-body-md mt-4">The primary driver remains **Onboarding Friction (28%)**, followed by **Competitive Pricing Adjustments (22%)**. Would you like me to drill down into the specific regions showing the highest onboarding delays?</p>
+<div class="mt-4 flex items-center space-x-3">
+<button class="text-xs font-label-md text-on-surface-variant hover:text-primary flex items-center transition-colors">
+<span class="material-symbols-outlined text-sm mr-1">thumb_up</span> Helpful
+                                        </button>
+<button class="text-xs font-label-md text-on-surface-variant hover:text-primary flex items-center transition-colors">
+<span class="material-symbols-outlined text-sm mr-1">content_copy</span> Copy
+                                        </button>
+<button class="text-xs font-label-md text-on-surface-variant hover:text-primary flex items-center transition-colors">
+<span class="material-symbols-outlined text-sm mr-1">share</span> Export
+                                        </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Glass Input Pill -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-gutter-sm z-20">
+<div class="input-glow glass-panel rounded-full p-2 flex items-center transition-all duration-300">
+<button class="p-3 rounded-full text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant/50 font-body-md px-4 py-2" placeholder="Ask your analyst anything..." type="text"/>
+<div class="flex items-center space-x-1 pr-1">
+<button class="p-3 rounded-full text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="w-12 h-12 bg-primary rounded-full text-on-primary flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="flex justify-center mt-3 space-x-6">
+<span class="text-[10px] font-label-md text-on-surface-variant flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
+                            GPT-4o Enterprise Active
+                        </span>
+<span class="text-[10px] font-label-md text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined text-xs mr-1">security</span>
+                            Private Context
+                        </span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Interactive Layer for AI Presence -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-10 opacity-20 overflow-hidden">
+
+</div>
+<script>
+        // Subtle micro-interactions for the conversational interface
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputField = document.querySelector('input');
+            const mainChatArea = document.querySelector('.overflow-y-auto');
+
+            // Scroll to bottom on load
+            mainChatArea.scrollTop = mainChatArea.scrollHeight;
+
+            // Handle focus state for input container
+            inputField.addEventListener('focus', () => {
+                inputField.parentElement.classList.add('border-primary/40');
+            });
+
+            inputField.addEventListener('blur', () => {
+                inputField.parentElement.classList.remove('border-primary/40');
+            });
+
+            // Simulate pressing enter
+            inputField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && inputField.value.trim() !== '') {
+                    console.log('User Input:', inputField.value);
+                    inputField.value = '';
+                    // In a real app, this would trigger the message generation flow
+                }
+            });
+        });
+    </script>
+</body></html>

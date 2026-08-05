@@ -1,5 +1,61 @@
 import pandas as pd
 import numpy as np
+import os
+import ast
+
+def sanitize_code(code: str) -> str:
+    """
+    Cleans generated Python code:
+    1. Replaces smart quotes (“ ” ‘ ’) with standard quotes (" ').
+    2. Extracts python code blocks if Markdown code fences are present.
+    """
+    # Replace smart quotes with standard quotes
+    smart_quotes = {
+        '“': '"',
+        '”': '"',
+        '‘': "'",
+        '’': "'"
+    }
+    for sq, rq in smart_quotes.items():
+        code = code.replace(sq, rq)
+
+    # Extract code between fences if they exist
+    if "```" in code:
+        parts = code.split("```")
+        code_blocks = []
+        for i, part in enumerate(parts):
+            if i % 2 == 1: # Odd index elements are inside fences
+                lines = part.splitlines()
+                if lines and lines[0].strip() in ("python", "py"):
+                    lines = lines[1:]
+                code_blocks.append("\n".join(lines))
+        if code_blocks:
+            code = "\n".join(code_blocks)
+        else:
+            code = code.replace("```python", "").replace("```", "")
+    else:
+        code = code.replace("```python", "").replace("```", "")
+
+    return code.strip()
+
+def log_failed_generation(raw_code: str, cleaned_code: str, error_msg: str):
+    """
+    Logs failed code generations to failed_generations.log in the backend directory.
+    """
+    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "failed_generations.log")
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write("=" * 80 + "\n")
+            f.write(f"ERROR: {error_msg}\n")
+            f.write("-" * 40 + "\n")
+            f.write("RAW LLM RESPONSE:\n")
+            f.write(raw_code + "\n")
+            f.write("-" * 40 + "\n")
+            f.write("CLEANED CODE:\n")
+            f.write(cleaned_code + "\n")
+            f.write("=" * 80 + "\n\n")
+    except Exception as e:
+        print(f"Failed to write to failed_generations.log: {e}")
 
 def execute_pandas_code(df: pd.DataFrame, code: str):
     """
@@ -10,31 +66,59 @@ def execute_pandas_code(df: pd.DataFrame, code: str):
     The last expression's value is typically what we care about, BUT
     we will rely on variables created in the local scope, or explicitly printing.
     
-    However, for the agent, we often want updates to the dataframe or a specific result.
-    
     This executor will:
-    1. Define 'df' in the local scope.
-    2. Execute the code.
-    3. Return a success flag and either the result or error message.
+    1. Log raw LLM response.
+    2. Sanitize code and strip fences/smart quotes.
+    3. Log cleaned code.
+    4. Validate using ast.parse() before execution.
+    5. If syntax validation fails: log to failed_generations.log and return a user-friendly error.
+    6. Execute the code.
+    7. Return a success flag and either the result or error message.
     """
+    # 1. Log raw LLM response before cleanup
+    print("--- [Executor] Raw LLM Response ---")
+    print(code)
+    print("-----------------------------------")
+    
+    # 2. Sanitize first
+    cleaned_code = sanitize_code(code)
+    
+    # 3. Log cleaned code
+    print("--- [Executor] Cleaned Code ---")
+    print(cleaned_code)
+    print("-------------------------------")
     
     # Simple safety check
     forbidden = ["import os", "import sys", "subprocess", "eval(", "exec(", "open("]
     for term in forbidden:
-        if term in code:
-            return False, f"Safety violation: Code contains forbidden term '{term}'"
+        if term in cleaned_code:
+            error_msg = f"Safety violation: Code contains forbidden term '{term}'"
+            log_failed_generation(code, cleaned_code, error_msg)
+            return False, error_msg
+
+    # 4. Validate using ast.parse() before execution
+    try:
+        ast.parse(cleaned_code)
+    except SyntaxError as se:
+        # Construct user-friendly error message showing where the syntax error is
+        lines = cleaned_code.splitlines()
+        offending_line = ""
+        if se.lineno is not None and 1 <= se.lineno <= len(lines):
+            offending_line = lines[se.lineno - 1]
+            
+        error_msg = (
+            f"Code Validation Error: {se.msg}\n"
+            f"Line {se.lineno}: {offending_line.strip()}"
+        )
+        
+        # Log to failed_generations.log
+        log_failed_generation(code, cleaned_code, error_msg)
+        return False, error_msg
 
     local_scope = {"df": df, "pd": pd, "np": np}
     
     try:
-        # We wrap execution to capture stdout if needed, but for now let's just run it
-        # and see if it runs.
-        # To get a return value, the code should assign to a variable named 'result'
-        # or we can try to inspect the last line. 
-        # Simpler approach for this agent: The code should just run. 
-        # If it returns a scalar/string/dict, assign it to variable 'result'.
-        
-        exec(code, {}, local_scope)
+        exec(cleaned_code, {}, local_scope)
         
         result = local_scope.get("result", "Execution successful (no 'result' variable set)")
         
@@ -45,4 +129,7 @@ def execute_pandas_code(df: pd.DataFrame, code: str):
         return True, str(result)
         
     except Exception as e:
+        # Log runtime errors as well for debugging completeness
+        log_failed_generation(code, cleaned_code, f"Runtime Error: {str(e)}")
         return False, str(e)
+

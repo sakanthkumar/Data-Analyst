@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+*.md
+venv/
+node_modules/
+build/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+reports/
+chroma_db/
+dataset/
+downloaded_screens/
+failed_generations.log

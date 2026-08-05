@@ -31,22 +31,21 @@ def normalize_output(text: str, section_type: str) -> str:
 
     SECTION_CONFIG = {
         "root_cause": {
-            "title": "Root Cause Summary",
+            "title": "Driver Analysis Summary",
             "forbidden": FORBIDDEN_COMMON + [
-                "repair", "replace", "inspect", "how to"
+                "action guide", "mitigation", "strategy", "remedy", "how to"
             ]
         },
         "impact": {
             "title": "Impact Assessment",
             "forbidden": FORBIDDEN_COMMON + [
-                "cause", "caused by", "repair",
-                "replace", "inspect", "due to"
+                "driver", "cause", "caused by", "strategy", "mitigate", "due to"
             ]
         },
         "repair": {
-            "title": "Repair Guide",
+            "title": "Action Guide",
             "forbidden": FORBIDDEN_COMMON + [
-                "cause", "caused by", "correlation",
+                "driver", "cause", "caused by", "correlation",
                 "frequency", "%", "impact", "due to"
             ]
         }
@@ -70,9 +69,11 @@ def normalize_output(text: str, section_type: str) -> str:
         if (
             lower.startswith("#")
             or lower.startswith("section")
+            or lower.startswith("driver")
             or lower.startswith("root cause")
-            or lower.startswith("impact assessment")
-            or lower.startswith("repair guide")
+            or lower.startswith("impact")
+            or lower.startswith("repair")
+            or lower.startswith("action")
             or lower.startswith("analysis")
             or lower.startswith("failure")
             or lower.startswith("title")

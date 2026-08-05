@@ -1,8 +1,22 @@
 import { render, screen } from '@testing-library/react';
-import App from './App';
 
-test('renders learn react link', () => {
+const mockAxiosInstance = {
+  get: jest.fn(),
+  post: jest.fn(),
+};
+
+jest.mock('axios', () => ({
+  create: jest.fn(() => mockAxiosInstance),
+  get: jest.fn(),
+  post: jest.fn(),
+}));
+
+test('renders the dashboard upload prompt', async () => {
+  const App = require('./App').default;
+  mockAxiosInstance.get.mockResolvedValue({ data: { error: 'No dataset has been uploaded' } });
+
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(await screen.findByText(/start new analysis/i)).toBeInTheDocument();
 });
+
+

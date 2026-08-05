@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './services/api';
 
 export default function Reports() {
     const [reports, setReports] = useState([]);
@@ -9,7 +9,7 @@ export default function Reports() {
     useEffect(() => {
         const fetchReports = async () => {
             try {
-                const res = await axios.get("http://localhost:8000/reports");
+                const res = await api.getReportsList();
                 setReports(res.data);
             } catch (e) { console.error(e); }
         };
@@ -19,7 +19,7 @@ export default function Reports() {
     const viewReport = async (id) => {
         setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:8000/reports/${id}`);
+            const res = await api.getReportDetail(id);
             setSelectedReport(res.data);
         } catch (e) {
             console.error(e);
@@ -45,9 +45,9 @@ export default function Reports() {
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Machine</th>
+                                    <th>Dataset/Context</th>
                                     <th>Analysis Type</th>
-                                    <th>Failures</th>
+                                    <th>Highlighted Records</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -74,12 +74,12 @@ export default function Reports() {
                     <div className="card">
                         <header style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                             <h2>{selectedReport.analysis_type} Report</h2>
-                            <p>Machine: {selectedReport.machine_name} | Date: {new Date(selectedReport.timestamp).toLocaleString()}</p>
+                            <p>Dataset/Context: {selectedReport.machine_name} | Date: {new Date(selectedReport.timestamp).toLocaleString()}</p>
                         </header>
 
                         {selectedReport.failures && selectedReport.failures.length > 0 && (
                             <div className="table-wrapper" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                <h4>Failure Log ({selectedReport.total_failures})</h4>
+                                <h4>Highlighted Records ({selectedReport.total_failures})</h4>
                                 <table>
                                     <thead>
                                         <tr>{Object.keys(selectedReport.failures[0]).map(k => <th key={k}>{k}</th>)}</tr>

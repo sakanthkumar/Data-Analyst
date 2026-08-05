@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import { api } from "./services/api";
 
-function Chat() {
+function Chat({ domainProfile }) {
   const [q, setQ] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ function Chat() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8000/chat", { question: userMsg.content });
+      const res = await api.postChat(userMsg.content);
       const aiMsg = { role: "ai", content: res.data.answer || "I couldn't process that." };
       setMessages(prev => [...prev, aiMsg]);
     } catch (e) {
@@ -39,17 +39,17 @@ function Chat() {
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <h3>💬 AI Maintenance Assistant</h3>
+        <h3>💬 AI {domainProfile?.domain ? domainProfile.domain : 'Analytics'} Assistant</h3>
       </div>
 
       <div className="chat-messages" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="ai-avatar-large">🤖</div>
-            <p>How can I help you analyze your machine data today?</p>
+            <p>How can I help you analyze your dataset today?</p>
             <div className="suggestions">
-              <span onClick={() => setQ("Show me the failure distribution")}>"Show me the failure distribution"</span>
-              <span onClick={() => setQ("Why is the robot overheating?")}>"Why is the robot overheating?"</span>
+              <span onClick={() => setQ("Show me the target variable distribution")}>"Show me the target variable distribution"</span>
+              <span onClick={() => setQ("What are the key drivers of the target variable?")}>"What are the key drivers of the target variable?"</span>
             </div>
           </div>
         )}

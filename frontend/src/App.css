@@ -1,32 +1,48 @@
 :root {
-  /* Common Brand Colors */
-  --primary-color: #3b82f6;
-  --primary-hover: #2563eb;
-  --accent-color: #10b981;
-  --danger-color: #ef4444;
+  /* Common Brand Colors & Spacing (Universal) */
+  --primary-color: #3b82f6;          /* Strategic Blue */
+  --primary-hover: #1d4ed8;
+  --secondary-color: #6366f1;        /* Intellect Indigo */
+  --accent-color: #10b981;          /* Desaturated Emerald Success */
+  --danger-color: #ef4444;           /* Desaturated Rose Error */
+  --warning-color: #f59e0b;          /* Amber Warning */
 
-  /* Defaults (Dark Mode - Carbon/Neutral) */
-  --bg-body: #121212;
-  --bg-sidebar: #1e1e1e;
-  --bg-card: #1e1e1e;
-  --bg-input: #2d2d2d;
-  --border-color: #404040;
-  --text-main: #e5e7eb;
-  --text-muted: #9ca3af;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+  --spacing-unit: 8px;
+  --spacing-gutter-sm: 16px;
+  --spacing-gutter-md: 24px;
+  --spacing-margin-page: 40px;
+  --spacing-container-max: 1440px;
+
+  /* Defaults (Dark Mode as Default) */
+  --bg-body: #0f172a;                 /* Deep Obsidian Slate */
+  --bg-sidebar: #0b1326;              /* Dark low container slate */
+  --bg-header: rgba(15, 23, 42, 0.8);  /* Blurry glass obsidian */
+  --bg-card: #111827;                 /* Charcoal Flat Card Surface */
+  --bg-input: #0f172a;                /* Recessed inputs */
+  
+  --border-color: rgba(255, 255, 255, 0.05);
+  --border-active: rgba(59, 130, 246, 0.2);
+  
+  --text-main: #f8fafc;               /* Ice White */
+  --text-muted: #94a3b8;              /* Cool Slate Gray */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme='light'] {
-  --bg-body: #f1f5f9;
-  --bg-sidebar: #ffffff;
-  --bg-card: #ffffff;
-  --bg-input: #f8fafc;
-  --border-color: #e2e8f0;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --bg-body: #f8fafc;                 /* Ice white background */
+  --bg-sidebar: #ffffff;              /* Crisp white sidebar */
+  --bg-header: rgba(248, 250, 252, 0.8);
+  --bg-card: #ffffff;                 /* Pure white cards */
+  --bg-input: #f1f5f9;                /* Slate-100 inputs */
+  
+  --border-color: rgba(0, 0, 0, 0.05);
+  --border-active: rgba(59, 130, 246, 0.3);
+  
+  --text-main: #0f172a;               /* Deep slate dark text */
+  --text-muted: #64748b;              /* Charcoal gray */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 body {
@@ -83,18 +99,23 @@ body {
 h1,
 h2,
 h3,
-h4 {
+h4,
+h5,
+h6 {
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
 }
 
 h1 {
   font-size: 1.875rem;
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-size: 1.5rem;
+  letter-spacing: -0.01em;
 }
 
 h3 {
@@ -104,6 +125,7 @@ h3 {
 p {
   color: var(--text-muted);
   line-height: 1.5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Buttons */
@@ -111,7 +133,7 @@ button {
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
-  border-radius: 6px;
+  border-radius: 4px;
   border: none;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
@@ -152,7 +174,7 @@ button {
 .card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   transition: background-color 0.3s ease;
@@ -448,4 +470,89 @@ input[type="text"]:focus {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Glassmorphism UI tokens */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Chromatic Border for AI components */
+.chromatic-border {
+  position: relative;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(173, 198, 255, 0.1), rgba(208, 188, 255, 0.2), rgba(173, 198, 255, 0.1));
+  border-radius: 4px;
+}
+
+.chromatic-inner {
+  background: var(--bg-body);
+  border-radius: 3px;
+  height: 100%;
+  width: 100%;
+}
+
+/* Technical Font classes */
+.label-technical {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+/* Skeleton Loading Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.08) 37%,
+    rgba(255, 255, 255, 0.02) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.progressive-section {
+  animation: fadeIn 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+/* Global Design System Level 1 Radius Enforcer */
+.glass-card,
+.card,
+button,
+input,
+select,
+textarea,
+[style*="border-radius: 8px"],
+[style*="border-radius: 6px"],
+[style*="border-radius: 8px;"],
+[style*="border-radius: 6px;"],
+[style*="border-radius:8px"],
+[style*="border-radius:6px"] {
+  border-radius: 4px !important;
 }

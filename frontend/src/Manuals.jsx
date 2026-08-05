@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from './services/api';
 
 function Manuals() {
     const [file, setFile] = useState(null);
@@ -12,9 +13,8 @@ function Manuals() {
 
     const fetchManuals = async () => {
         try {
-            const response = await fetch('http://localhost:8000/manuals');
-            const data = await response.json();
-            setManuals(Array.isArray(data) ? data : []);
+            const response = await api.getManuals();
+            setManuals(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Error fetching manuals:', error);
         }
@@ -36,21 +36,13 @@ function Manuals() {
         formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8000/manuals/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            const data = await response.json();
-
-            if (response.ok) {
-                setMessage('Success: ' + data.message);
-                setFile(null);
-                fetchManuals(); // Refresh list
-            } else {
-                setMessage('Error: ' + data.error);
-            }
+            const response = await api.uploadManual(formData);
+            setMessage('Success: ' + response.data.message);
+            setFile(null);
+            fetchManuals(); // Refresh list
         } catch (error) {
-            setMessage('Upload failed: ' + error.message);
+            const errMsg = error.response?.data?.error || error.message;
+            setMessage('Error: ' + errMsg);
         } finally {
             setUploading(false);
         }
@@ -58,11 +50,11 @@ function Manuals() {
 
     return (
         <div style={{ padding: '20px', color: '#fff' }}>
-            <h2>Knowledge Base (ERP Manuals)</h2>
-            <p>Upload machine manuals (PDF) here. The agent will read them to diagnose issues.</p>
+            <h2>Document Library (Reference Manuals)</h2>
+            <p>Upload reference manuals (PDF) here. The agent will read them to enrich the analysis context.</p>
 
             <div style={{ marginBottom: '30px', background: '#333', padding: '20px', borderRadius: '8px' }}>
-                <h3>Add New Manual</h3>
+                <h3>Add New Document</h3>
                 <input
                     type="file"
                     accept=".pdf"
@@ -87,9 +79,9 @@ function Manuals() {
             </div>
 
             <div>
-                <h3>Available Manuals</h3>
+                <h3>Available Documents</h3>
                 {manuals.length === 0 ? (
-                    <p>No manuals uploaded yet.</p>
+                    <p>No reference documents uploaded yet.</p>
                 ) : (
                     <ul style={{ listStyle: 'none', padding: 0 }}>
                         {manuals.map((manual, index) => (

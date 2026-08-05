@@ -1,12 +1,55 @@
-node_modules/
+# Python
 venv/
+.venv/
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Environment Variables
 .env
+.env.*
+!.env.example
+
+# Node
+node_modules/
 dist/
 build/
-backend/reports/
-backend/chroma_db/
-backend/manuals/
+
+# IDEs
 .vscode/
+.idea/
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Generated Reports
+reports/
+backend/reports/
+
+# Chroma Vector Database
+chroma_db/
+backend/chroma_db/
+
+# Uploaded Manuals / Documents
+manuals/
+backend/manuals/
+
+# Uploaded Files (if applicable)
+uploads/
+backend/uploads/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Docker
+*.pid
+
+# Misc
+*.tmp
