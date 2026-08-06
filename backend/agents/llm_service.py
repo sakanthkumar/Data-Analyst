@@ -44,11 +44,15 @@ class LLMService:
 
         # Resolve model names from env with sensible defaults
         if self.backend == "groq":
-            self.code_model = code_model or os.getenv("GROQ_MODEL_CODE", "qwen-qwq-32b")
-            self.analysis_model = analysis_model or os.getenv("GROQ_MODEL_REASONING", "deepseek-r1-distill-llama-70b")
+            raw_code = code_model or os.getenv("GROQ_MODEL_CODE", "llama-3.3-70b-versatile")
+            raw_reasoning = analysis_model or os.getenv("GROQ_MODEL_REASONING", "llama-3.3-70b-versatile")
+            self.code_model = raw_code.strip() if raw_code else "llama-3.3-70b-versatile"
+            self.analysis_model = raw_reasoning.strip() if raw_reasoning else "llama-3.3-70b-versatile"
         else:
-            self.analysis_model = analysis_model or os.getenv("OLLAMA_REASONING_MODEL", "llama3")
-            self.code_model = code_model or os.getenv("OLLAMA_CODE_MODEL", "deepseek-coder:6.7b")
+            raw_reasoning = analysis_model or os.getenv("OLLAMA_REASONING_MODEL", "llama3")
+            raw_code = code_model or os.getenv("OLLAMA_CODE_MODEL", "deepseek-coder:6.7b")
+            self.analysis_model = raw_reasoning.strip() if raw_reasoning else "llama3"
+            self.code_model = raw_code.strip() if raw_code else "deepseek-coder:6.7b"
 
         # Legacy compat: store ollama_url for set_config
         if ollama_url:
@@ -200,16 +204,16 @@ GLOBAL RULES
 
     def set_models(self, code_model: str = None, analysis_model: str = None):
         """Update model identifiers."""
-        if code_model:
-            self.code_model = code_model
-        if analysis_model:
-            self.analysis_model = analysis_model
+        if code_model and isinstance(code_model, str) and code_model.strip():
+            self.code_model = code_model.strip()
+        if analysis_model and isinstance(analysis_model, str) and analysis_model.strip():
+            self.analysis_model = analysis_model.strip()
 
     def call_llm(self, prompt: str, system_type: str = "analysis", system_prompt: str = None):
         """Route LLM request to the active provider with the appropriate model.
 
         Model routing:
-            system_type == "code"    -> self.code_model
+            system_type == "code"                  -> self.code_model
             system_type == "analysis" or "failure" -> self.analysis_model
         """
         if not RUN_LLM_ANALYSIS:
@@ -222,6 +226,20 @@ GLOBAL RULES
                 return '{"domain": "Generic Test Domain", "confidence": 0.95, "analysis_type": "descriptive", "target_column": null, "identifier_columns": [], "date_columns": [], "numeric_columns": [], "categorical_columns": [], "business_entities": [], "recommended_kpis": [], "recommended_analytics_tasks": []}'
             return "Mocked test response content."
 
+        # Input validation
+        if prompt is None or not isinstance(prompt, str) or not prompt.strip():
+            logger.error("LLMService.call_llm received invalid or empty prompt.")
+            raise ValueError("LLM request prompt must be a non-empty string.")
+
+        # Ensure valid temperature
+        try:
+            temp = float(self.temperature)
+            if temp < 0.0 or temp > 2.0:
+                logger.warning(f"Temperature {temp} out of range [0.0, 2.0]. Defaulting to 0.1.")
+                temp = 0.1
+        except (ValueError, TypeError):
+            temp = 0.1
+
         # Resolve system prompt
         if system_prompt is None:
             if system_type == "code":
@@ -231,10 +249,17 @@ GLOBAL RULES
             else:
                 system_prompt = self.system_prompt_analysis
 
-        # Route to correct model
-        model = self.code_model if system_type == "code" else self.analysis_model
+        # Route to correct model based on system_type
+        if system_type == "code":
+            model = self.code_model or ("llama-3.3-70b-versatile" if self.backend == "groq" else "deepseek-coder:6.7b")
+        else:
+            model = self.analysis_model or ("llama-3.3-70b-versatile" if self.backend == "groq" else "llama3")
 
-        return self.provider.generate(prompt, system_prompt, model, self.temperature)
+        if not model or not isinstance(model, str) or not model.strip():
+            logger.error(f"Invalid model configured for backend '{self.backend}' and system_type '{system_type}'.")
+            raise ValueError(f"No valid model identifier specified for system_type '{system_type}'.")
+
+        return self.provider.generate(prompt.strip(), system_prompt, model.strip(), temp)
 
     # Legacy methods preserved for backward compatibility
     def call_ollama_with_model(self, prompt: str, system_prompt: str, model: str):

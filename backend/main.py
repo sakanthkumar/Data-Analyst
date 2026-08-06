@@ -38,30 +38,34 @@ from datetime import datetime
 def validate_startup_config():
     """Fail-fast validation for startup configuration and runtime environments."""
     backend_provider = os.getenv("LLM_BACKEND", "groq").lower()
+    timeout = os.getenv("LLM_REQUEST_TIMEOUT", "60")
     logger.info(f"Validating startup configuration for LLM_BACKEND={backend_provider}...")
     
     if backend_provider == "groq":
-        api_key = os.getenv("GROQ_API_KEY", "")
+        api_key = os.getenv("GROQ_API_KEY", "").strip()
         if not api_key:
             logger.error("GROQ_API_KEY is missing while LLM_BACKEND is set to 'groq'.")
             raise RuntimeError("Configuration Error: GROQ_API_KEY environment variable is required.")
-        reasoning_model = os.getenv("GROQ_MODEL_REASONING", "")
-        code_model = os.getenv("GROQ_MODEL_CODE", "")
-        if reasoning_model:
-            logger.info(f"Groq Reasoning Model: {reasoning_model}")
-        if code_model:
-            logger.info(f"Groq Code Model: {code_model}")
+        reasoning_model = os.getenv("GROQ_MODEL_REASONING", "llama-3.3-70b-versatile").strip()
+        code_model = os.getenv("GROQ_MODEL_CODE", "llama-3.3-70b-versatile").strip()
+        
+        logger.info(f"✓ Provider: groq")
+        logger.info(f"✓ Models: Reasoning={reasoning_model}, Code={code_model}")
+        logger.info(f"✓ Timeout: {timeout}s")
+        logger.info(f"✓ Configuration Valid")
     elif backend_provider == "ollama":
-        ollama_url = os.getenv("OLLAMA_BASE_URL", "")
+        ollama_url = os.getenv("OLLAMA_BASE_URL", "").strip()
         if not ollama_url:
             logger.error("OLLAMA_BASE_URL is missing while LLM_BACKEND is set to 'ollama'.")
             raise RuntimeError("Configuration Error: OLLAMA_BASE_URL environment variable is required.")
-        reasoning_model = os.getenv("OLLAMA_REASONING_MODEL", "")
-        code_model = os.getenv("OLLAMA_CODE_MODEL", "")
-        if reasoning_model:
-            logger.info(f"Ollama Reasoning Model: {reasoning_model}")
-        if code_model:
-            logger.info(f"Ollama Code Model: {code_model}")
+        reasoning_model = os.getenv("OLLAMA_REASONING_MODEL", "llama3").strip()
+        code_model = os.getenv("OLLAMA_CODE_MODEL", "deepseek-coder:6.7b").strip()
+        
+        logger.info(f"✓ Provider: ollama")
+        logger.info(f"✓ Endpoint: {ollama_url}")
+        logger.info(f"✓ Models: Reasoning={reasoning_model}, Code={code_model}")
+        logger.info(f"✓ Timeout: {timeout}s")
+        logger.info(f"✓ Configuration Valid")
     else:
         logger.error(f"Unsupported LLM_BACKEND: '{backend_provider}'. Supported: 'groq', 'ollama'.")
         raise RuntimeError(f"Configuration Error: Unsupported LLM_BACKEND '{backend_provider}'.")
